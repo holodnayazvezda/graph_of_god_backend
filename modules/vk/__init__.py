@@ -1,0 +1,1 @@
+"""VK integration module."""
