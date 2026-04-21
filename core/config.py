@@ -21,6 +21,7 @@ class AppConfig:
     vk_api_version: str = "5.199"
     request_timeout_seconds: float = 15.0
     vk_max_connections_per_profile: int = 5000
+    vk_max_graph_connections_per_seed: int = 250
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     job_workers: int = 4
@@ -60,6 +61,10 @@ class AppConfig:
             raw_value=os.getenv("VK_MAX_CONNECTIONS_PER_PROFILE", "5000").strip() or "5000",
             field_name="VK_MAX_CONNECTIONS_PER_PROFILE",
         )
+        vk_max_graph_connections_per_seed = _parse_positive_int(
+            raw_value=os.getenv("VK_MAX_GRAPH_CONNECTIONS_PER_SEED", "250").strip() or "250",
+            field_name="VK_MAX_GRAPH_CONNECTIONS_PER_SEED",
+        )
         api_host = os.getenv("GRAPH_OF_GOD_BACKEND_API_HOST", "127.0.0.1").strip() or "127.0.0.1"
         api_port = _parse_positive_int(
             raw_value=os.getenv("GRAPH_OF_GOD_BACKEND_API_PORT", "8000").strip() or "8000",
@@ -83,6 +88,7 @@ class AppConfig:
             vk_api_version=api_version,
             request_timeout_seconds=timeout,
             vk_max_connections_per_profile=vk_max_connections_per_profile,
+            vk_max_graph_connections_per_seed=vk_max_graph_connections_per_seed,
             api_host=api_host,
             api_port=api_port,
             job_workers=job_workers,

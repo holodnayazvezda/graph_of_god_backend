@@ -22,8 +22,14 @@ MAX_GRAPH_PROFILES = 5
 
 
 class SocialGraphService:
-    def __init__(self, friend_links_service: FriendLinksService) -> None:
+    def __init__(
+        self,
+        friend_links_service: FriendLinksService,
+        *,
+        max_connections_per_seed: int = 250,
+    ) -> None:
         self._friend_links_service = friend_links_service
+        self._max_connections_per_seed = max_connections_per_seed
 
     def build_social_graph(self, profile_references: Iterable[str]) -> SocialGraphResult:
         normalized_references = [profile_reference.strip() for profile_reference in profile_references]
@@ -42,7 +48,11 @@ class SocialGraphService:
             )
 
         self._ensure_unique_seed_users(seed_results)
-        return _build_social_graph(normalized_references, seed_results)
+        graph_seed_results = _limit_seed_results_for_graph(
+            seed_results,
+            max_connections_per_seed=self._max_connections_per_seed,
+        )
+        return _build_social_graph(normalized_references, graph_seed_results)
 
     def _ensure_unique_seed_users(self, seed_results: list[FriendLinksResult]) -> None:
         seen_user_ids: set[int] = set()
@@ -79,6 +89,51 @@ class _EdgeAccumulator:
     source_node_id: str
     target_node_id: str
     connected_seed_indices: set[int] = field(default_factory=set)
+
+
+def _limit_seed_results_for_graph(
+    seed_results: list[FriendLinksResult],
+    *,
+    max_connections_per_seed: int,
+) -> list[FriendLinksResult]:
+    if max_connections_per_seed <= 0:
+        return seed_results
+
+    shared_seed_count_by_user_id: dict[int, int] = {}
+    for result in seed_results:
+        for user_id in {link.user_id for link in result.links}:
+            shared_seed_count_by_user_id[user_id] = shared_seed_count_by_user_id.get(user_id, 0) + 1
+
+    limited_results: list[FriendLinksResult] = []
+    for result in seed_results:
+        if len(result.links) <= max_connections_per_seed:
+            limited_results.append(result)
+            continue
+
+        ranked_links = sorted(
+            enumerate(result.links),
+            key=lambda item: (
+                -shared_seed_count_by_user_id.get(item[1].user_id, 1),
+                item[0],
+            ),
+        )
+        selected_indices = sorted(index for index, _ in ranked_links[:max_connections_per_seed])
+        selected_links = tuple(result.links[index] for index in selected_indices)
+
+        limited_results.append(
+            FriendLinksResult(
+                user=result.user,
+                links=selected_links,
+                is_private=result.is_private,
+                source_kind=result.source_kind,
+                returned_count=len(selected_links),
+                total_available_count=result.total_available_count,
+                is_truncated=result.is_truncated or len(selected_links) < len(result.links),
+                max_connection_limit=min(result.max_connection_limit, max_connections_per_seed),
+            )
+        )
+
+    return limited_results
 
 
 def _build_social_graph(

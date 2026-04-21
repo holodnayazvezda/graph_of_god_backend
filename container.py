@@ -36,7 +36,10 @@ def build_container() -> AppContainer:
         vk_api_client,
         max_connections_per_profile=config.vk_max_connections_per_profile,
     )
-    social_graph_service = SocialGraphService(friend_links_service)
+    social_graph_service = SocialGraphService(
+        friend_links_service,
+        max_connections_per_seed=config.vk_max_graph_connections_per_seed,
+    )
     friend_links_job_manager = BackgroundJobManager[str, FriendLinksResult](
         resolver=friend_links_service.collect_friend_links,
         max_workers=config.job_workers,
