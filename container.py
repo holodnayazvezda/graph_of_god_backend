@@ -6,8 +6,13 @@ from graph_of_god_backend.background.job_manager import BackgroundJobManager
 from graph_of_god_backend.core.config import AppConfig
 from graph_of_god_backend.modules.vk.auth import build_access_token_provider
 from graph_of_god_backend.modules.vk.client import VKApiClient
+from graph_of_god_backend.modules.vk.deep_friend_analysis_service import DeepFriendAnalysisService
 from graph_of_god_backend.modules.vk.friend_links_service import FriendLinksService
-from graph_of_god_backend.modules.vk.entities import FriendLinksResult, SocialGraphResult
+from graph_of_god_backend.modules.vk.entities import (
+    DeepFriendAnalysisResult,
+    FriendLinksResult,
+    SocialGraphResult,
+)
 from graph_of_god_backend.modules.vk.social_graph_service import SocialGraphService
 
 
@@ -16,12 +21,15 @@ class AppContainer:
     config: AppConfig
     friend_links_service: FriendLinksService
     social_graph_service: SocialGraphService
+    deep_friend_analysis_service: DeepFriendAnalysisService
     friend_links_job_manager: BackgroundJobManager[str, FriendLinksResult]
     social_graph_job_manager: BackgroundJobManager[tuple[str, ...], SocialGraphResult]
+    deep_friend_analysis_job_manager: BackgroundJobManager[tuple[str, int], DeepFriendAnalysisResult]
 
     def shutdown(self) -> None:
         self.friend_links_job_manager.shutdown()
         self.social_graph_job_manager.shutdown()
+        self.deep_friend_analysis_job_manager.shutdown()
 
 
 def build_container() -> AppContainer:
@@ -40,6 +48,12 @@ def build_container() -> AppContainer:
         friend_links_service,
         max_connections_per_seed=config.vk_max_graph_connections_per_seed,
     )
+    deep_friend_analysis_service = DeepFriendAnalysisService(
+        friend_links_service,
+        max_depth=config.vk_max_deep_analysis_depth,
+        max_profiles_to_explore=config.vk_max_deep_analysis_profiles_to_explore,
+        max_connections_per_profile=config.vk_max_deep_analysis_connections_per_profile,
+    )
     friend_links_job_manager = BackgroundJobManager[str, FriendLinksResult](
         resolver=friend_links_service.collect_friend_links,
         max_workers=config.job_workers,
@@ -50,10 +64,17 @@ def build_container() -> AppContainer:
         max_workers=config.job_workers,
         retention_seconds=config.job_retention_seconds,
     )
+    deep_friend_analysis_job_manager = BackgroundJobManager[tuple[str, int], DeepFriendAnalysisResult](
+        resolver=deep_friend_analysis_service.build_deep_friend_analysis,
+        max_workers=config.job_workers,
+        retention_seconds=config.job_retention_seconds,
+    )
     return AppContainer(
         config=config,
         friend_links_service=friend_links_service,
         social_graph_service=social_graph_service,
+        deep_friend_analysis_service=deep_friend_analysis_service,
         friend_links_job_manager=friend_links_job_manager,
         social_graph_job_manager=social_graph_job_manager,
+        deep_friend_analysis_job_manager=deep_friend_analysis_job_manager,
     )

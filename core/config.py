@@ -22,6 +22,9 @@ class AppConfig:
     request_timeout_seconds: float = 15.0
     vk_max_connections_per_profile: int = 5000
     vk_max_graph_connections_per_seed: int = 250
+    vk_max_deep_analysis_depth: int = 6
+    vk_max_deep_analysis_profiles_to_explore: int = 6000
+    vk_max_deep_analysis_connections_per_profile: int = 200
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     job_workers: int = 4
@@ -65,6 +68,18 @@ class AppConfig:
             raw_value=os.getenv("VK_MAX_GRAPH_CONNECTIONS_PER_SEED", "250").strip() or "250",
             field_name="VK_MAX_GRAPH_CONNECTIONS_PER_SEED",
         )
+        vk_max_deep_analysis_depth = _parse_positive_int(
+            raw_value=os.getenv("VK_MAX_DEEP_ANALYSIS_DEPTH", "6").strip() or "6",
+            field_name="VK_MAX_DEEP_ANALYSIS_DEPTH",
+        )
+        vk_max_deep_analysis_profiles_to_explore = _parse_positive_int(
+            raw_value=os.getenv("VK_MAX_DEEP_ANALYSIS_PROFILES_TO_EXPLORE", "6000").strip() or "6000",
+            field_name="VK_MAX_DEEP_ANALYSIS_PROFILES_TO_EXPLORE",
+        )
+        vk_max_deep_analysis_connections_per_profile = _parse_positive_int(
+            raw_value=os.getenv("VK_MAX_DEEP_ANALYSIS_CONNECTIONS_PER_PROFILE", "200").strip() or "200",
+            field_name="VK_MAX_DEEP_ANALYSIS_CONNECTIONS_PER_PROFILE",
+        )
         api_host = os.getenv("GRAPH_OF_GOD_BACKEND_API_HOST", "127.0.0.1").strip() or "127.0.0.1"
         api_port = _parse_positive_int(
             raw_value=os.getenv("GRAPH_OF_GOD_BACKEND_API_PORT", "8000").strip() or "8000",
@@ -89,6 +104,9 @@ class AppConfig:
             request_timeout_seconds=timeout,
             vk_max_connections_per_profile=vk_max_connections_per_profile,
             vk_max_graph_connections_per_seed=vk_max_graph_connections_per_seed,
+            vk_max_deep_analysis_depth=vk_max_deep_analysis_depth,
+            vk_max_deep_analysis_profiles_to_explore=vk_max_deep_analysis_profiles_to_explore,
+            vk_max_deep_analysis_connections_per_profile=vk_max_deep_analysis_connections_per_profile,
             api_host=api_host,
             api_port=api_port,
             job_workers=job_workers,
